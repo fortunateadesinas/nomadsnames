@@ -15,18 +15,23 @@ contract NomadNames is ERC721 {
     }
 
     mapping(uint256 => Domain) public domains;
-    mapping(string => bool) private domainExists; // 🔹 Track listed domain names
+    mapping(string => bool) private domainExists; // Track listed domain names
 
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {
         owner = msg.sender;
     }
 
     function list(string memory _name, uint256 _cost) public {
-        require(!domainExists[_name], "Domain already listed"); // 🔹 Prevent duplicate listing
+        require(!domainExists[_name], "Domain already listed");
 
         maxSupply++;
         domains[maxSupply] = Domain(_name, _cost, false);
-        domainExists[_name] = true; // 🔹 Mark domain as listed
+        domainExists[_name] = true;
+    }
+
+    // New function to check if a domain name exists
+    function domainExistsByName(string memory _name) public view returns (bool) {
+        return domainExists[_name];
     }
 
     function mint(uint256 _id) public payable {
