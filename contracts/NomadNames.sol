@@ -12,6 +12,7 @@ contract NomadNames is ERC721 {
         string name;
         uint256 cost;
         bool isOwned;
+        address lister;  // Added to track who listed the domain
     }
 
     mapping(uint256 => Domain) public domains;
@@ -25,11 +26,10 @@ contract NomadNames is ERC721 {
         require(!domainExists[_name], "Domain already listed");
 
         maxSupply++;
-        domains[maxSupply] = Domain(_name, _cost, false);
+        domains[maxSupply] = Domain(_name, _cost, false, msg.sender); // Store the lister's address
         domainExists[_name] = true;
     }
 
-    // New function to check if a domain name exists
     function domainExistsByName(string memory _name) public view returns (bool) {
         return domainExists[_name];
     }
@@ -42,6 +42,20 @@ contract NomadNames is ERC721 {
         domains[_id].isOwned = true;
         totalSupply++;
         _safeMint(msg.sender, _id);
+
+        // Calculate payment distribution
+        uint256 totalCost = msg.value;
+        uint256 listerShare = (totalCost * 80) / 100; // 80% to lister
+        uint256 ownerShare = totalCost - listerShare; // 20% to owner
+
+        // Send 80% to the lister
+        address lister = domains[_id].lister;
+        (bool sentToLister, ) = lister.call{value: listerShare}("");
+        require(sentToLister, "Failed to send to lister");
+
+        // Send 20% to the owner
+        (bool sentToOwner, ) = owner.call{value: ownerShare}("");
+        require(sentToOwner, "Failed to send to owner");
     }
 
     function getDomain(uint256 _id) public view returns (Domain memory) {
@@ -50,7 +64,8 @@ contract NomadNames is ERC721 {
 
     function withdraw() public {
         require(msg.sender == owner, "Not contract owner");
-        (bool success, ) = owner.call{value: address(this).balance}("");
+        uint256 balance = address(this).balance;
+        (bool success, ) = owner.call{value: balance}("");
         require(success, "Withdraw failed");
     }
 }

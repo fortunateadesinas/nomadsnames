@@ -1,24 +1,25 @@
 import { useState, useRef } from "react";
 import { ethers } from "ethers";
+// import "./Search.css"; // You'll need to create this CSS file
 
 const Search = ({ nomadNames, provider }) => {
   const [domainName, setDomainName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [price, setPrice] = useState("");
   const isProcessing = useRef(false);
 
-  const buyDomain = async () => {
+  const handleSubmit = async () => {
     if (!domainName) return alert("Please enter a domain name");
+    if (!price) return alert("Please enter a price");
 
-    // Prevent multiple clicks during processing
     if (isProcessing.current) return;
 
-    // Validate domain ends with .bnb
     if (!domainName.endsWith(".bnb")) {
       alert("Domain must end with .bnb");
       return;
     }
 
-    // Check if domain already exists
     const exists = await nomadNames.domainExistsByName(domainName);
     if (exists) {
       alert(`Domain "${domainName}" is already listed.`);
@@ -27,21 +28,17 @@ const Search = ({ nomadNames, provider }) => {
 
     isProcessing.current = true;
     setLoading(true);
+    setIsModalOpen(false);
+
     try {
       const signer = provider.getSigner();
+      const cost = ethers.utils.parseUnits(price, "ether");
 
-      const randomCost = ethers.utils.parseUnits(
-        (Math.random() * 0.001).toFixed(5),
-        "ether"
-      );
-
-      // List the domain
-      const listTx = await nomadNames
-        .connect(signer)
-        .list(domainName, randomCost);
+      const listTx = await nomadNames.connect(signer).list(domainName, cost);
       await listTx.wait();
 
       alert(`Domain "${domainName}" has been listed successfully!`);
+      setPrice("");
     } catch (error) {
       console.error("Error buying domain:", error);
       alert(
@@ -49,6 +46,7 @@ const Search = ({ nomadNames, provider }) => {
       );
     }
     setLoading(false);
+    isProcessing.current = false;
   };
 
   return (
@@ -68,11 +66,47 @@ const Search = ({ nomadNames, provider }) => {
         <button
           type="button"
           className="header__button"
-          onClick={buyDomain}
+          onClick={() => setIsModalOpen(true)}
           disabled={loading}
         >
           {loading ? "Processing..." : "List For Sale"}
         </button>
+
+        {isModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h2>List Domain for Sale</h2>
+              <p>Set the listing price for {domainName || "your domain"}</p>
+              <div className="modal-form">
+                <label htmlFor="price">Price (BNB):</label>
+                <input
+                  id="price"
+                  type="number"
+                  step="0.0001"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0.001"
+                />
+              </div>
+              <div className="modal-buttons">
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="modal-button confirm"
+                >
+                  {loading ? "Processing..." : "Confirm"}
+                </button>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={loading}
+                  className="modal-button cancel"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
