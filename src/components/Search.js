@@ -52,7 +52,7 @@ const Search = ({ nomadNames, provider }) => {
   return (
     <header>
       <p className="header__subtitle">
-        Find and purchase available domain names. Before any one else!!
+        Find, list or purchase available domain names.
       </p>
       <h2 className="header__title">It all starts with a domain name.</h2>
       <div className="header__search">

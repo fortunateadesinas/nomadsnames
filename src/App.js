@@ -30,12 +30,23 @@ function App() {
     setNomadNames(nomadNames);
 
     const maxSupply = await nomadNames.maxSupply();
-    const domains = [];
-    for (var i = 1; i <= maxSupply; i++) {
+    const domainList = [];
+    for (let i = 1; i <= maxSupply; i++) {
       const domain = await nomadNames.getDomain(i);
-      domains.push(domain);
+      domainList.push({ ...domain, id: i }); // Add id to each domain object
     }
-    setDomains(domains);
+
+    // Sort domains: unowned first in reverse order (newest at top), then owned at bottom
+    const sortedDomains = domainList.sort((a, b) => {
+      const aIsOwned = a.isOwned || false; // Use domain.isOwned if available
+      const bIsOwned = b.isOwned || false;
+
+      if (aIsOwned && !bIsOwned) return 1;  // Owned goes to bottom
+      if (!aIsOwned && bIsOwned) return -1; // Unowned stays above
+      return b.id - a.id;                   // Reverse order (higher ID = newer)
+    });
+
+    setDomains(sortedDomains);
 
     window.ethereum.on("accountsChanged", async () => {
       const accounts = await window.ethereum.request({
@@ -69,7 +80,7 @@ function App() {
               domain={domain}
               nomadNames={nomadNames}
               provider={provider}
-              id={index + 1}
+              id={domain.id} // Use domain.id instead of index + 1
               key={index}
             />
           ))}
